@@ -9,7 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
+	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/fluxcd/flux/pkg/ssh"
 )
@@ -60,8 +60,19 @@ func NewSSHKeyRing(config SSHKeyRingConfig) (*sshKeyRing, error) {
 	case err != nil:
 		// There's some other problem with that bit of filesystem
 		return nil, errors.Wrap(err, "checking for mounted secret")
+	}
+
+	skr.privateKeyPath = mountedPrivateKeyPath
+
+	// The private key file exists. We now need a public key.
+	// Check if one already exists on disk
+	existingPublicKey, err := ssh.ReadExistingPublicKey(mountedPrivateKeyPath)
+	switch {
+	case err == nil:
+		// We found an existing public key on disk. Use that
+		skr.publicKey = existingPublicKey
 	case fileInfo.Mode() != privateKeyFileMode:
-		// The key is mounted, but not the right permissions; since
+		// The private key is mounted, but not the right permissions; since
 		// it's likely to be read-only, we may not be able to rectify
 		// this, but let's try.
 		if err := os.Chmod(mountedPrivateKeyPath, privateKeyFileMode); err != nil {
@@ -69,7 +80,7 @@ func NewSSHKeyRing(config SSHKeyRingConfig) (*sshKeyRing, error) {
 		}
 		fallthrough
 	default:
-		skr.privateKeyPath = mountedPrivateKeyPath
+		// No existing public key. Extract it from the private key
 		publicKey, err := ssh.ExtractPublicKey(skr.privateKeyPath)
 		if err != nil {
 			return nil, errors.Wrap(err, "extracting public key")

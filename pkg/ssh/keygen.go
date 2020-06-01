@@ -2,7 +2,6 @@ package ssh
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os/exec"
@@ -10,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 )
 
@@ -155,6 +155,25 @@ var (
 	captureCount = 6
 )
 
+// ParseFingerprint reads in an array of bytes containing the hash and
+// randomart of a public key and parses them and returns a typed Fingerprint object.
+func ParseFingerprint(fingerprintBytes []byte) (Fingerprint, error) {
+	i := bytes.IndexByte(fingerprintBytes, '\n')
+	if i == -1 {
+		return Fingerprint{}, fmt.Errorf("could not parse fingerprint")
+	}
+
+	fields := fieldRegexp.FindSubmatch(fingerprintBytes[:i])
+	if len(fields) != captureCount {
+		return Fingerprint{}, fmt.Errorf("could not parse fingerprint")
+	}
+
+	return Fingerprint{
+		Hash:      string(fields[3]),
+		Randomart: string(fingerprintBytes[i+1:]),
+	}, nil
+}
+
 // Fingerprint extracts and returns the hash and randomart of the public key
 // associated with the specified private key.
 func ExtractFingerprint(privateKeyPath, hashAlgo string) (Fingerprint, error) {
@@ -163,20 +182,7 @@ func ExtractFingerprint(privateKeyPath, hashAlgo string) (Fingerprint, error) {
 		return Fingerprint{}, err
 	}
 
-	i := bytes.IndexByte(output, '\n')
-	if i == -1 {
-		return Fingerprint{}, fmt.Errorf("could not parse fingerprint")
-	}
-
-	fields := fieldRegexp.FindSubmatch(output[:i])
-	if len(fields) != captureCount {
-		return Fingerprint{}, fmt.Errorf("could not parse fingerprint")
-	}
-
-	return Fingerprint{
-		Hash:      string(fields[3]),
-		Randomart: string(output[i+1:]),
-	}, nil
+	return ParseFingerprint(output)
 }
 
 type PublicKey struct {
@@ -207,6 +213,42 @@ func ExtractPublicKey(privateKeyPath string) (PublicKey, error) {
 		Fingerprints: map[string]Fingerprint{
 			"md5":    md5Print,
 			"sha256": sha256Print,
+		},
+	}, nil
+}
+
+// ReadExistingPublicKey attempts to read in the public key and
+// fingerprints in files stored adjacant to the given private key
+// on disk.
+func ReadExistingPublicKey(privateKeyPath string) (PublicKey, error) {
+	keyBytes, err := ioutil.ReadFile(privateKeyPath + ".pub")
+	if err != nil {
+		return PublicKey{}, errors.Wrap(err, "looking for existing public key alongside private key")
+	}
+
+	md5Bytes, err := ioutil.ReadFile(privateKeyPath + ".md5")
+	if err != nil {
+		return PublicKey{}, errors.Wrap(err, "looking for existing md5 fingerprint alongside private key")
+	}
+	md5Fingerprint, err := ParseFingerprint(md5Bytes)
+	if err != nil {
+		return PublicKey{}, err
+	}
+
+	sha256Bytes, err := ioutil.ReadFile(privateKeyPath + ".sha256")
+	if err != nil {
+		return PublicKey{}, errors.Wrap(err, "looking for existing sha256 fingerprint alongside private key")
+	}
+	sha256Fingerprint, err := ParseFingerprint(sha256Bytes)
+	if err != nil {
+		return PublicKey{}, err
+	}
+
+	return PublicKey{
+		Key: string(keyBytes),
+		Fingerprints: map[string]Fingerprint{
+			"md5":    md5Fingerprint,
+			"sha256": sha256Fingerprint,
 		},
 	}, nil
 }
