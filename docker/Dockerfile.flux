@@ -47,7 +47,7 @@ ENV PATH=/bin:/usr/bin:/usr/local/bin:/usr/lib/kubeyaml
 #   (it uses musl), maintainers argue that the need of nsswitch.conf is a Go bug:
 #   https://github.com/gliderlabs/docker-alpine/issues/367#issuecomment-354316460
 RUN [ ! -e /etc/nsswitch.conf ] && echo 'hosts: files dns' > /etc/nsswitch.conf
-COPY ./kubeconfig /root/.kube/config
+COPY ./kubeconfig /etc/fluxd/kube/config
 COPY ./fluxd /usr/local/bin/
 
 ARG BUILD_DATE
@@ -58,3 +58,6 @@ LABEL org.opencontainers.image.revision="$VCS_REF" \
       org.opencontainers.image.created="$BUILD_DATE" \
       org.label-schema.vcs-ref="$VCS_REF" \
       org.label-schema.build-date="$BUILD_DATE"
+
+RUN /usr/sbin/addgroup -S flux -g 1000
+RUN /usr/sbin/adduser -D -G flux -u 1000 flux

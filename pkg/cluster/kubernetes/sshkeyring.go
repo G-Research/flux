@@ -14,12 +14,6 @@ import (
 	"github.com/fluxcd/flux/pkg/ssh"
 )
 
-const (
-	// The private key file must have these permissions, or ssh will refuse to
-	// use it
-	privateKeyFileMode = os.FileMode(0400)
-)
-
 // SSHKeyRingConfig is used to configure the keyring with key generation
 // options and the parameters of its backing kubernetes secret resource.
 // SecretVolumeMountPath must be mounted RW for regenerate() to work, and to
@@ -50,7 +44,7 @@ func NewSSHKeyRing(config SSHKeyRingConfig) (*sshKeyRing, error) {
 	skr := &sshKeyRing{SSHKeyRingConfig: config}
 	mountedPrivateKeyPath := filepath.Join(skr.SecretVolumeMountPath, skr.SecretDataKey)
 
-	fileInfo, err := os.Stat(mountedPrivateKeyPath)
+	_, err := os.Stat(mountedPrivateKeyPath)
 	switch {
 	case os.IsNotExist(err):
 		// The key is not mounted from the secret, so generate one.
@@ -60,14 +54,6 @@ func NewSSHKeyRing(config SSHKeyRingConfig) (*sshKeyRing, error) {
 	case err != nil:
 		// There's some other problem with that bit of filesystem
 		return nil, errors.Wrap(err, "checking for mounted secret")
-	case fileInfo.Mode() != privateKeyFileMode:
-		// The key is mounted, but not the right permissions; since
-		// it's likely to be read-only, we may not be able to rectify
-		// this, but let's try.
-		if err := os.Chmod(mountedPrivateKeyPath, privateKeyFileMode); err != nil {
-			return nil, errors.Wrap(err, "failed to chmod identity file")
-		}
-		fallthrough
 	default:
 		skr.privateKeyPath = mountedPrivateKeyPath
 		publicKey, err := ssh.ExtractPublicKey(skr.privateKeyPath)
@@ -113,7 +99,7 @@ func (skr *sshKeyRing) Regenerate() error {
 	if err = os.Symlink(tmpPrivateKeyPath, tmpSymlinkPath); err != nil {
 		return err
 	}
-	if err = os.Chmod(tmpSymlinkPath, privateKeyFileMode); err != nil {
+	if err = os.Chmod(tmpSymlinkPath, ssh.PrivateKeyFileMode); err != nil {
 		return err
 	}
 
