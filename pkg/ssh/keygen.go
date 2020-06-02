@@ -221,13 +221,11 @@ func ExtractPublicKey(privateKeyPath string) (PublicKey, error) {
 
 	md5Print, err := ExtractFingerprint(keyPathForFingerprints, "md5")
 	if err != nil {
-		fmt.Println("md5 err: " + err.Error())
 		return PublicKey{}, err
 	}
 
 	sha256Print, err := ExtractFingerprint(keyPathForFingerprints, "sha256")
 	if err != nil {
-		fmt.Println("sha256 err: " + err.Error())
 		return PublicKey{}, err
 	}
 
