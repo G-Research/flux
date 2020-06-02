@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Example of generating a secret with an externally
-# created ssh key
+# created ssh key.
 
 ssh-keygen -q -N "" -f identity
 
@@ -12,4 +12,4 @@ kubectl -n flux create secret generic flux-git-deploy-explicit \
   --from-file=identity \
   --from-file=identity.pub 
 
-#rm identity identity.pub
+rm identity identity.pub

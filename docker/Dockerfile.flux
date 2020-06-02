@@ -47,7 +47,7 @@ ENV PATH=/bin:/usr/bin:/usr/local/bin:/usr/lib/kubeyaml
 #   (it uses musl), maintainers argue that the need of nsswitch.conf is a Go bug:
 #   https://github.com/gliderlabs/docker-alpine/issues/367#issuecomment-354316460
 RUN [ ! -e /etc/nsswitch.conf ] && echo 'hosts: files dns' > /etc/nsswitch.conf
-COPY ./kubeconfig /etc/fluxd/kube/config
+COPY ./kubeconfig /root/.kube/config
 COPY ./fluxd /usr/local/bin/
 
 ARG BUILD_DATE

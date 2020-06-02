@@ -71,7 +71,7 @@ spec:
         # There are no ":latest" images for flux. Find the most recent
         # release or image version at https://hub.docker.com/r/fluxcd/flux/tags
         # and replace the tag here.
-        image: docker.io/fluxcd/flux
+        image: docker.io/fluxcd/flux:1.19.0
         imagePullPolicy: IfNotPresent
         resources:
           requests:
@@ -147,7 +147,7 @@ spec:
         # Replace the following URL to change the Git repository used by Flux.
         # HTTP basic auth credentials can be supplied using environment variables:
         # https://$(GIT_AUTHUSER):$(GIT_AUTHKEY)@github.com/user/repository.git
-        - --git-url=git@github.com:jmarkp/flux-get-started
+        - --git-url=git@github.com:fluxcd/flux-get-started
         - --git-branch=master
         # Include this if you want to restrict the manifests considered by flux
         # to those under the following relative paths in the git repository
@@ -180,7 +180,6 @@ spec:
         # Serve /metrics endpoint at different port;
         # make sure to set prometheus' annotation to scrape the port value.
         - --listen-metrics=:3031
-        - --kube-config=/etc/fluxd/kube/config
 
       # Optional DNS settings, configuring the ndots option may resolve
       # nslookup issues on some Kubernetes setups.
