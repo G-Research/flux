@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - master
+      - gr-publish
 
 jobs:
   unit-testing:
