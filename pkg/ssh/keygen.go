@@ -2,16 +2,21 @@ package ssh
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
 	"regexp"
 	"strconv"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 )
+
+// The private key file must have these permissions, or ssh will refuse to
+// use it
+const PrivateKeyFileMode = os.FileMode(0400)
 
 // OptionalValue is an extension of pflag.Value that remembers if it has been
 // set.
@@ -156,9 +161,9 @@ var (
 )
 
 // Fingerprint extracts and returns the hash and randomart of the public key
-// associated with the specified private key.
-func ExtractFingerprint(privateKeyPath, hashAlgo string) (Fingerprint, error) {
-	output, err := exec.Command("ssh-keygen", "-l", "-v", "-E", hashAlgo, "-f", privateKeyPath).Output()
+// associated with the specified key (public or private).
+func ExtractFingerprint(keyPath, hashAlgo string) (Fingerprint, error) {
+	output, err := exec.Command("ssh-keygen", "-l", "-v", "-E", hashAlgo, "-f", keyPath).Output()
 	if err != nil {
 		return Fingerprint{}, err
 	}
@@ -187,17 +192,39 @@ type PublicKey struct {
 // ExtractPublicKey extracts and returns the public key from the specified
 // private key, along with its fingerprint hashes.
 func ExtractPublicKey(privateKeyPath string) (PublicKey, error) {
-	keyBytes, err := exec.Command("ssh-keygen", "-y", "-f", privateKeyPath).CombinedOutput()
+	// Try to read public key from disk
+	publicKeyFilePath := privateKeyPath + ".pub"
+	keyPathForFingerprints := publicKeyFilePath
+
+	keyBytes, err := ioutil.ReadFile(publicKeyFilePath)
 	if err != nil {
-		return PublicKey{}, errors.New(string(keyBytes))
+		// Public file doesn't exist, or isn't readable
+		// Generate it from the private key instead
+		fileInfo, err := os.Stat(privateKeyPath)
+
+		if fileInfo.Mode() != PrivateKeyFileMode {
+			// The key is mounted, but not the right permissions; since
+			// it's likely to be read-only, we may not be able to rectify
+			// this, but let's try.
+			if err := os.Chmod(privateKeyPath, PrivateKeyFileMode); err != nil {
+				return PublicKey{}, errors.Wrap(err, "failed to chmod identity file")
+			}
+		}
+
+		keyBytes, err = exec.Command("ssh-keygen", "-y", "-f", privateKeyPath).CombinedOutput()
+		if err != nil {
+			return PublicKey{}, errors.New(string(keyBytes))
+		}
+
+		keyPathForFingerprints = privateKeyPath
 	}
 
-	md5Print, err := ExtractFingerprint(privateKeyPath, "md5")
+	md5Print, err := ExtractFingerprint(keyPathForFingerprints, "md5")
 	if err != nil {
 		return PublicKey{}, err
 	}
 
-	sha256Print, err := ExtractFingerprint(privateKeyPath, "sha256")
+	sha256Print, err := ExtractFingerprint(keyPathForFingerprints, "sha256")
 	if err != nil {
 		return PublicKey{}, err
 	}

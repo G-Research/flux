@@ -58,3 +58,6 @@ LABEL org.opencontainers.image.revision="$VCS_REF" \
       org.opencontainers.image.created="$BUILD_DATE" \
       org.label-schema.vcs-ref="$VCS_REF" \
       org.label-schema.build-date="$BUILD_DATE"
+
+RUN /usr/sbin/addgroup -S flux -g 1000
+RUN /usr/sbin/adduser -S -D flux -G flux -u 1000
