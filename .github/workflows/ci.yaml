@@ -88,6 +88,6 @@ jobs:
         export IMAGE_TAG="${{ secrets.DOCKER_USERNAME }}/flux:$TIMESTAMP-$GITHUB_SHA"
         docker image load --input cache/flux-latest.tar
         docker image tag fluxcd/flux:latest $IMAGE_TAG
-        docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-        echo "Pushing $IMAGE_TAG to Docker Hub..."
-        docker push $IMAGE_TAG
+        #docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+        #echo "Pushing $IMAGE_TAG to Docker Hub..."
+        #docker push $IMAGE_TAG
