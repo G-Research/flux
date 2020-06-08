@@ -85,7 +85,7 @@ jobs:
     - name: Push
       run: |
         export TIMESTAMP=`date "+%Y%m%d-%H%M%S"`
-        export IMAGE_TAG="docker.pkg.github.com/$GITHUB_REPOSITORY/flux:$TIMESTAMP-$GITHUB_SHA"
+        export IMAGE_TAG="docker.pkg.github.com/g-research/flux/flux:$TIMESTAMP-$GITHUB_SHA"
         docker image load --input cache/flux-latest.tar
         docker image tag fluxcd/flux:latest $IMAGE_TAG
         docker login docker.pkg.github.com -u $GITHUB_ACTOR -p ${{ secrets.GITHUB_TOKEN }}
